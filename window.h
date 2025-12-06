@@ -3,8 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include <functional>
-#include <memory>
-#include <vector>
+#include <list>
 
 class Texture {
     SDL_Texture *_texture;
@@ -28,8 +27,8 @@ class Window {
     bool _closed;
     SDL_Window *_window;
     SDL_Renderer *_renderer;
-    std::vector<std::unique_ptr<Texture>> _textures;
     SDL_Event _event;
+    std::list<Texture> _textures;
 
 public:
     Window(int width, int height);

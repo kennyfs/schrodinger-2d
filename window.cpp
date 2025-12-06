@@ -1,5 +1,4 @@
 #include "window.h"
-#include <memory>
 
 // class Texture
 Texture::Texture(int width, int height) {
@@ -60,20 +59,18 @@ void Window::update() {
     if (_event.type == SDL_QUIT) _closed = true;
     SDL_RenderClear(_renderer);
     for (auto &x : _textures)
-        SDL_RenderCopy(_renderer, x->_texture, nullptr, &x->_rect);
+        SDL_RenderCopy(_renderer, x._texture, nullptr, &x._rect);
     SDL_RenderPresent(_renderer);
 }
 
 Texture& Window::create_texture(int width, int height) {
-    auto &texture = _textures.emplace_back(
-        std::make_unique<Texture>(width, height)
-    );
-    texture->_texture = SDL_CreateTexture(
+    auto &texture = _textures.emplace_back(width, height);
+    texture._texture = SDL_CreateTexture(
         _renderer,
         SDL_PIXELFORMAT_RGBA8888,
         SDL_TEXTUREACCESS_STREAMING,
         width, height
     );
-    return *texture;
+    return texture;
 }
 
