@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include <functional>
+#include <memory>
 #include <vector>
 
 class Texture {
@@ -27,7 +28,7 @@ class Window {
     bool _closed;
     SDL_Window *_window;
     SDL_Renderer *_renderer;
-    std::vector<Texture> _textures;
+    std::vector<std::unique_ptr<Texture>> _textures;
     SDL_Event _event;
 
 public:
