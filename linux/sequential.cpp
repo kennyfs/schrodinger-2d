@@ -90,8 +90,8 @@ int main() {
     background.resize(window.width(), window.height());
     background.update([](int *color) { *color = 0x333333ff; });
 
-    constexpr int sim_w = 128;
-    constexpr int sim_h = 128;
+    constexpr int sim_w = 256;
+    constexpr int sim_h = 256;
     constexpr double aspect = (double)sim_w / sim_h;
     Texture &wave_plot = window.create_texture(sim_w, sim_h);
     wave_plot.move(0, 0);
@@ -99,7 +99,7 @@ int main() {
 
     Simulation sim(sim_w, sim_h, sim_w/4, sim_h/2, 100, 1, 0.01, 1, 0);
     while (!window.closed()) {
-        for (int i=0; i<200; i++) sim.step(0.05);
+        for (int i=0; i<200; i++) sim.step(0.01);
         auto &wave = sim.wave();
         wave_plot.update([&](int *pixels) {
             for (int i=0; i<sim_w*sim_h; i++)
