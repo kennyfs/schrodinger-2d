@@ -1,7 +1,7 @@
-CXXFLAGS = -Wall -O3
+CXXFLAGS = -Wall -O3 `pkg-config --cflags opencv4`
 NVCC = nvcc
-LDLIBS = -lSDL2
-CUDAFLAG = -O3
+LDLIBS = -lSDL2 `pkg-config --libs opencv4`
+CUDAFLAG = -O3 `pkg-config --cflags opencv4`
 
 ifdef HEADLESS
 CXXFLAGS += -DHEADLESS
@@ -12,11 +12,11 @@ endif
 
 all: sequential cuda
 
-sequential: sequential.cpp $(OBJ_FILES)
-	$(CXX) $(CXXFLAGS) -o $@ sequential.cpp $(OBJ_FILES) $(LDLIBS)
+sequential: sequential.cpp window.o
+	$(CXX) $(CXXFLAGS) -o $@ sequential.cpp window.o $(LDLIBS)
 
-cuda: cuda.cu $(OBJ_FILES)
-	$(NVCC) $(CUDAFLAG) -o $@ cuda.cu $(OBJ_FILES) $(LDLIBS)
+cuda: cuda.cu window.o
+	$(NVCC) $(CUDAFLAG) -o $@ cuda.cu window.o $(LDLIBS)
 
 
 window.o: window.cpp window.h

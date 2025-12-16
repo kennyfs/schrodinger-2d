@@ -15,6 +15,7 @@
 #include <thrust/reduce.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/functional.h>
+#include <opencv2/opencv.hpp>
 
 using namespace std::complex_literals;
 
@@ -117,7 +118,7 @@ __device__ int device_rgba(double r, double g, double b, double a) {
     unsigned char gu = g * 0xff;
     unsigned char bu = b * 0xff;
     unsigned char au = a * 0xff;
-    return (ru << 24) | (gu << 16) | (bu << 8) | au;
+    return (au << 24) | (ru << 16) | (gu << 8) | bu;
 }
 
 __global__ void complex_to_rgba_kernel(thrust::complex<double> *wave,
@@ -245,20 +246,6 @@ void GPUSimulation::_normalize() {
     cudaDeviceSynchronize();
 }
 
-void write_header(std::ofstream &out, int width, int height, int frames) {
-    const char magic[] = "SCHR";
-    out.write(magic, 4);
-    out.write(reinterpret_cast<const char *>(&width), sizeof(int));
-    out.write(reinterpret_cast<const char *>(&height), sizeof(int));
-    out.write(reinterpret_cast<const char *>(&frames), sizeof(int));
-}
-
-void write_frame(std::ofstream &out,
-                 const std::vector<thrust::complex<double>> &wave) {
-    out.write(reinterpret_cast<const char *>(wave.data()),
-              wave.size() * sizeof(thrust::complex<double>));
-}
-
 int main(int argc, char *argv[]) {
     constexpr int sim_w = 256;
     constexpr int sim_h = 256;
@@ -266,41 +253,43 @@ int main(int argc, char *argv[]) {
 
     if (argc > 1) {
         if (std::string(argv[1]) == "--batch") {
-            if (argc < 5) {
+            if (argc < 6) {
                 std::cerr
                     << "Usage: " << argv[0]
-                    << " --batch <output_file> <num_frames> <steps_per_frame>"
+                    << " --batch <output_file> <num_frames> <steps_per_frame> <fps>"
                     << std::endl;
                 return 1;
             }
             std::string output_file = argv[2];
             int num_frames = std::stoi(argv[3]);
             int steps_per_frame = std::stoi(argv[4]);
+            int fps = std::stoi(argv[5]);
 
-            std::ofstream out(output_file, std::ios::binary);
-            if (!out) {
-                std::cerr << "Failed to open output file: " << output_file
-                          << std::endl;
+            cv::VideoWriter writer(output_file, cv::VideoWriter::fourcc('H','2','6','4'), fps, cv::Size(sim_w, sim_h));
+            if (!writer.isOpened()) {
+                std::cerr << "Failed to open video writer: " << output_file << std::endl;
                 return 1;
             }
 
-            write_header(out, sim_w, sim_h, num_frames);
             std::cout << "Running CUDA batch mode: " << num_frames
-                      << " frames, " << steps_per_frame << " steps/frame"
-                      << std::endl;
-
-            std::vector<thrust::complex<double>> host_wave(sim_w * sim_h);
+                      << " frames, " << steps_per_frame << " steps/frame" << std::endl;
 
             for (int i = 0; i < num_frames; ++i) {
                 for (int j = 0; j < steps_per_frame; ++j) {
                     sim.step(0.01);
                 }
-                sim.get_wave(host_wave);
-                write_frame(out, host_wave);
+                int *gpu_pixels = sim.get_pixel_buffer();
+                std::vector<int> host_pixels(sim_w * sim_h);
+                cudaMemcpy(host_pixels.data(), gpu_pixels, sim_w * sim_h * sizeof(int), cudaMemcpyDeviceToHost);
+                cv::Mat mat(sim_h, sim_w, CV_8UC4, host_pixels.data());
+                cv::Mat bgr;
+                cv::cvtColor(mat, bgr, cv::COLOR_BGRA2BGR);
+                writer.write(bgr);
                 if (i % 10 == 0)
                     std::cout << "Frame " << i << "/" << num_frames << "\r"
                               << std::flush;
             }
+            writer.release();
             std::cout << "Batch simulation complete." << std::endl;
             return 0;
         }
